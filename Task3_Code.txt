@@ -1,0 +1,570 @@
+'________________________Task 3_________________________
+
+'Global Variables 
+Integer Tokens
+Integer Blocks
+Double TokenHeight
+Double BlockHeight
+Integer Tokens_And_Blocks
+Integer Tokens_And_Blocks_Fixed
+
+Integer Pin_Start
+Integer Pin_Stop
+Integer Pin_Reset
+Integer Pin_Resume
+Integer Pin_Pause
+
+Integer Pin_Gauge1
+Integer Pin_Gauge2
+
+Integer Pin_Piston_Token
+Integer Pin_Piston_Block
+
+Integer Pin_Vacuum_Nozzle
+
+Integer pin_buzzer
+
+Integer StartBtnState
+Integer StopBtnState
+Integer PauseBtnState
+Integer ResumeBtnState
+Integer ResetBtnState
+
+
+'____________________Main Function__________________
+
+Function main
+Cls
+MemOff 1
+
+
+
+'Global variables assignment
+Tokens = 3
+Blocks = 3
+TokenHeight = 6.0 'mm
+BlockHeight = 6.0 'mm
+
+'Variables declaration 
+
+
+'Pins declaration 
+
+Pin_Start = 3	' self hold
+Pin_Stop = 1	' pulse 
+Pin_Reset = 14	' pulse
+Pin_Resume = 15	' activated when released
+Pin_Pause = 2	' pulse
+
+Pin_Gauge1 = 17
+Pin_Gauge2 = 16
+
+Pin_Piston_Token = 9
+Pin_Piston_Block = 12
+
+Pin_Vacuum_Nozzle = 8
+
+pin_buzzer = 11
+
+'---------------Buttons loop function--------------
+Start_Loop:
+
+TmReset 1
+Motor On
+Power High
+Speed 30
+Accel 30, 30
+SpeedS 500
+AccelS 5000
+Tool 1
+
+
+Wait Sw(Pin_Start) = On Or MemSw(1) = 1
+Print "Entering the main Loop..."
+Xqt PickNPlace
+Do While Sw(Pin_Start) = On Or MemSw(1) = 1
+		Speed 30
+		Accel 30, 30
+		SpeedS 500
+		AccelS 5000
+       	If Sw(Pin_Pause) = On Or MemSw(3) = 1 Then
+              	Halt PickNPlace
+	   	EndIf
+	   	If Sw(Pin_Reset) = On Or MemSw(5) = 1 Then
+	          	Quit PickNPlace
+	          	Reset
+	          	Speed 30
+				Accel 30, 30
+				SpeedS 500
+				AccelS 5000
+	          	GoTo Start_Loop
+	   	EndIf
+	   	If Sw(Pin_Resume) = On Or MemSw(4) = 1 Then
+	          	Resume PickNPlace
+	   	EndIf
+	   	If Sw(Pin_Stop) = On Or MemSw(2) = 1 Then
+	          	Quit PickNPlace
+
+       	EndIf
+Loop
+Halt PickNPlace
+
+Fend
+
+'----------------------stacking---------------------------------------
+Function Stacking_Second
+	Print "Stacking ID = ", (Tokens + Blocks)
+    Integer Pile_Height_Second
+	Pile_Height_Second = (TokenHeight * (Tokens_And_Blocks_Fixed - (Tokens + Blocks)))
+	
+	Go Stacking_Point +Z(Pile_Height_Second + 20) CP
+	Move Stacking_Point +Z(Pile_Height_Second) CP
+	Wait 0.2
+	Off 8
+	Wait 0.2
+	Go Stacking_Point +Z(Pile_Height_Second + 20) CP
+	
+	
+Fend
+
+
+'--------------------Pick and place function ------------------
+Function PickNPlace
+	Integer TokenID
+	Integer BlockID
+	
+	Go Retract_Safe
+	
+	For TokenID = Tokens To 1 Step -1
+		Pick_Infeed_Token()
+		Alignment_Token_Piston()
+		Place_Tray_Token_Pallet_Local()
+	Next TokenID
+	
+	
+	For BlockID = Blocks To 1 Step -1
+		Pick_Infeed_Block()
+		Alignment_Block_Piston()
+		Place_Tray_Block_Pallet_Local()
+	Next BlockID
+	
+	Go Retract_Safe
+	
+	Home
+	Print Tmr(1)
+	
+Fend
+
+'-----------Place---Token---Pallet---Local-----------------
+Function Place_Tray_Token_Pallet_Local
+	Print "Placing Token. 				Token ID = ", Tokens
+	P20 = XY(0, 0, 0, 0, 0, 0) /1;
+	P21 = XY(0, -60, 0, 0, 0, 0) /1;
+	P22 = XY(30, 0, 0, 0) /1;
+	
+	Pallet 1, P20, P22, P21, 2, 3
+	
+	Go Pallet(1, 1, Tokens) -Z(50) CP
+	
+    Move Pallet(1, 1, Tokens)
+	Off Pin_Vacuum_Nozzle
+	Wait .5
+	Move Pallet(1, 1, Tokens) -Z(50) CP
+
+	Tokens = Tokens - 1
+Fend
+'-----------Place---Block---Pallet---Local-----------------
+Function Place_Tray_Block_Pallet_Local
+	Print "Placing Block. 				Block ID = ", Blocks
+	Print "Tray Position ID = ", Blocks
+	P20 = XY(0, 0, 0, 0, 0, 0) /1;
+	P21 = XY(0, -60, 0, 0, 0, 0) /1;
+	P22 = XY(30, 0, 0, 0) /1;
+	
+	Pallet 1, P20, P22, P21, 2, 3
+	
+	Go Pallet(1, 2, Blocks) -Z(50) CP
+	
+    Move Pallet(1, 2, Blocks)
+	Off Pin_Vacuum_Nozzle
+	Wait .5
+	Move Pallet(1, 2, Blocks) -Z(50) CP
+	
+	Blocks = Blocks - 1
+Fend
+
+
+'---------------Alignment Token with Piston------------------
+Function Alignment_Token_Piston
+	'Alignment Token
+	Print "Aligning Token. 			Token ID = ", Tokens
+	Go Align_Token -X(10) -Y(10) +Z(30) CP
+	Move Align_Token
+	Off Pin_Vacuum_Nozzle
+    Move Align_Token +Z(30) CP
+    
+    On Pin_Piston_Token
+    Wait 0.5
+    Off Pin_Piston_Token
+    
+    Move Align_Token
+	On Pin_Vacuum_Nozzle
+	Wait .5
+	VacuumSuccced()
+	Move Align_Token +Z(20) CP
+Fend
+
+
+'---------------Alignment Block with Piston------------------
+Function Alignment_Block_Piston
+	'Alignment Token
+	Print "Aligning Block. 			Block ID = ", Blocks
+	Go Align_Block -X(5) -Y(5) +Z(30) CP
+	Move Align_Block
+	Off Pin_Vacuum_Nozzle
+    Move Align_Block +Z(30) CP
+    
+    On Pin_Piston_Block
+    Wait 0.5
+    Off Pin_Piston_Block
+    
+    Move Align_Block
+	On Pin_Vacuum_Nozzle
+	Wait .5
+	VacuumSuccced()
+	Move Align_Block +Z(20) CP
+Fend
+
+'---------------Pick Token from Infeed------------------
+Function Pick_Infeed_Token
+	'Pick Token from Infeed
+	Print "Picking Token from Infeed. 	Token ID = ", Tokens
+	Go Infeed_Token +Z(50 + (Tokens * TokenHeight)) CP
+	Move Infeed_Token +Z(Tokens * TokenHeight)
+	On Pin_Vacuum_Nozzle
+	Wait .5
+	VacuumSuccced()
+	Move Infeed_Token +X(-1) +Z(50 + (Tokens * TokenHeight)) CP
+	
+Fend
+
+'---------------Pick Block from Infeed------------------
+Function Pick_Infeed_Block
+	'Pick Block from Infeed
+	Print "Picking Block from Infeed. 	Block ID = ", Blocks
+	Go Infeed_Block +Z(50 + (Blocks * BlockHeight)) CP
+	Move Infeed_Block +Z(Blocks * BlockHeight)
+	On Pin_Vacuum_Nozzle
+	Wait .5
+	VacuumSuccced()
+	Move Infeed_Block +X(-1) +Y(1) +Z(50 + (Blocks * BlockHeight)) CP
+	
+Fend
+
+
+Function StartBtnStateChange
+	If MemSw(1) = 0 Then
+    	MemOn 1
+	EndIf
+Fend
+Function StopBtnStateChange
+	If MemSw(2) = 1 Then
+    	MemOff 2
+	Else
+    	MemOn 2
+	EndIf
+Fend
+Function PauseBtnStateChange
+	MemOn 3
+	Wait .1
+	MemOff 3
+Fend
+Function ResumeBtnStateChange
+	MemOn 4
+	Wait .1
+	MemOff 4
+Fend
+Function ResetBtnStateChange
+	MemOn 5
+	Wait .1
+	MemOff 5
+Fend
+
+
+
+
+
+Function VacuumSuccced
+	
+	
+	If Sw(Pin_Gauge2) = On Then
+        Resume PickNPlace
+        
+    Else
+    	Off Pin_Vacuum_Nozzle
+    	GSet ErrorScreen.ErrorLabel.Text, "Pressure loss, vaccumm not working. Close the window and restart the robot"
+    	GShow ErrorScreen
+    	Halt PickNPlace
+    	Halt SortInfeed
+	EndIf
+	
+	
+	If Sw(Pin_Gauge1) = On Then
+        Resume PickNPlace
+        
+    Else
+    	Off Pin_Vacuum_Nozzle
+    	GSet ErrorScreen.ErrorLabel.Text, "The object was not succesfully sucked"
+    	GShow ErrorScreen
+    	Halt PickNPlace
+    	Halt SortInfeed
+
+	EndIf
+	
+Fend
+
+
+Function SortInfeed
+	String texto$
+	GGet EpsonRobot.TextBoxSequence.Text, texto$
+	Integer c
+	Integer TokensAndBlocks
+	Integer OnlyTokens
+	Integer OnlyBlocks
+	Integer PlacedTokens
+	Integer PlacedBlocks
+	Integer ID
+	
+	PlacedTokens = 1
+	PlacedBlocks = 1
+	TokensAndBlocks = Len(texto$)
+	Tokens_And_Blocks = TokensAndBlocks
+	Tokens_And_Blocks_Fixed = TokensAndBlocks
+	Tokens = TokensAndBlocks /2
+	Blocks = Tokens
+	
+	For c = 1 To Len(texto$)
+		
+		
+		'Picking from infeed
+		Go Infeed_Block +Z(50 + (TokensAndBlocks * TokenHeight)) CP
+		Move Infeed_Block +Z((TokensAndBlocks * TokenHeight) + 1)
+		On Pin_Vacuum_Nozzle
+		Wait .5
+		VacuumSuccced()
+		Move Infeed_Block +X(-1) +Z(50 + (TokensAndBlocks * TokenHeight)) CP
+		
+		If Mid$(texto$, c, 1) = "T" Or Mid$(texto$, c, 1) = "t" Then
+
+			'Placing into second infeed
+			Go Infeed_Token_2 +Z(50 + (PlacedTokens * TokenHeight)) -X(5) -Y(6) CP
+			Move Infeed_Token_2 +Z((PlacedTokens * TokenHeight) + 1) -X(5) -Y(6)
+			Off Pin_Vacuum_Nozzle
+			Wait .2
+			Move Infeed_Token_2 +Z(50 + (PlacedTokens * TokenHeight)) -X(5) -Y(6) CP
+			PlacedTokens = PlacedTokens + 1
+		EndIf
+		
+		If Mid$(texto$, c, 1) = "B" Or Mid$(texto$, c, 1) = "b" Then
+
+			'Placing into second infeed
+			Go Infeed_Block_2 +Z(50 + (PlacedBlocks * BlockHeight)) -X(5) -Y(6) CP
+			Move Infeed_Block_2 +Z((PlacedBlocks * BlockHeight) + 1) -X(5) -Y(6)
+			Off Pin_Vacuum_Nozzle
+			Wait .2
+			Move Infeed_Block_2 +Z(50 + (PlacedBlocks * BlockHeight)) -X(5) -Y(6) CP
+			PlacedBlocks = PlacedBlocks + 1
+		EndIf
+	
+			
+		TokensAndBlocks = TokensAndBlocks - 1
+	Next c
+	
+	PlacedTokens = 4
+	PlacedBlocks = 4
+	
+	For ID = (Tokens_And_Blocks_Fixed / 2) To 1 Step -1
+	
+		Pick_Infeed_Block_Second()
+		Stacking_Second()
+		
+		Pick_Infeed_Token_Second()
+		Stacking_Second()
+		
+	Next ID
+	
+	Tokens = 3
+	Blocks = 3
+
+Fend
+
+
+
+Function Pick_Infeed_Token_Second
+	'Pick Token from Infeed
+	Print "Picking Token from Infeed. Token ID = ", Tokens
+	Integer Pile_Height
+    Pile_Height = TokenHeight * (Tokens)
+	
+	Go Infeed_Token_2 +Z(50 + (Pile_Height)) -X(5) -Y(6)
+	Move Infeed_Token_2 +Z(Pile_Height) -X(5) -Y(6)
+	On 8
+	Wait .2
+	Move Infeed_Token_2 +X(-1) +Z(50 + (Pile_Height)) -X(5) -Y(6) CP
+	Tokens = Tokens - 1
+Fend
+
+Function Pick_Infeed_Block_Second
+	'Pick Block from Infeed
+	Print "Picking Block from Infeed. Block ID = ", Blocks
+	Integer Pile_Height
+    Pile_Height = TokenHeight * (Blocks)
+	
+	Go Infeed_Block_2 +Z(50 + (Pile_Height)) -X(5) -Y(6)
+	Move Infeed_Block_2 +Z(Pile_Height) -X(5) -Y(6)
+	On 8
+	Wait .2
+	Move Infeed_Block_2 +X(-1) +Y(1) +Z(50 + (Pile_Height)) -X(5) -Y(6) CP
+	Blocks = Blocks - 1
+Fend
+
+
+
+Function CleanTray
+	Integer i
+	Integer j
+	P20 = XY(0, 0, 0, 0, 0, 0) /1;
+	P21 = XY(0, -60, 0, 0, 0, 0) /1;
+	P22 = XY(30, 0, 0, 0) /1;
+	
+	Pallet 1, P20, P22, P21, 2, 3
+
+	For i = 1 To 3
+		Go Pallet(1, 1, i) -Z(10) CP
+    	Move Pallet(1, 1, i)
+    	On Vacuum_Nozzle
+    	Wait .5
+    	If Sw(Pin_Gauge1) = On Then
+    		Move Pallet(1, 1, i) -Z(10) CP
+    		BMove XY(-50, 0, 0, 0) /1
+    		Off Vacuum_Nozzle
+    	Else
+    		Off Vacuum_Nozzle
+    		Move Pallet(1, 1, i) -Z(5) CP
+    	EndIf
+    	
+	Next
+	
+	For j = 3 To 1 Step -1
+		Go Pallet(1, 2, j) -Z(10) CP
+    	Move Pallet(1, 2, j)
+    	On Vacuum_Nozzle
+    	Wait .5
+    	If Sw(Pin_Gauge1) = On Then
+    		Move Pallet(1, 2, j) -Z(10) CP
+    		BMove XY(-80, 0, 0, 0) /1
+    		Off Vacuum_Nozzle
+    	Else
+    		Off Vacuum_Nozzle
+    		Move Pallet(1, 2, j) -Z(5) CP
+    	EndIf
+	Next
+    
+
+	
+Fend
+
+Function Dance
+	TmReset 1
+	Motor On
+	Power High
+	Speed 60
+	Accel 40, 40
+	SpeedS 300
+	AccelS 200
+	Tool 1
+	
+	Move P0
+	
+	On pin_buzzer
+	Wait .2
+	Off pin_buzzer
+	Wait .2
+	On pin_buzzer
+	Wait .2
+	Off pin_buzzer
+	Wait .2
+	On pin_buzzer
+	Wait .2
+	Off pin_buzzer
+	Wait .2
+	On pin_buzzer
+	Wait .2
+	Off pin_buzzer
+	Wait .2
+	
+	BMove XY(10, 0, 0, 0, -10, 0)
+	On pin_buzzer
+	
+	BMove XY(10, 0, 0, 0, -30, 0)
+	Off pin_buzzer
+	BMove XY(-10, 0, 0, 0, 20, 0)
+	On pin_buzzer
+	BMove XY(10, 0, 0, 0, -20, 0)
+	Off pin_buzzer
+	BMove XY(-10, 0, 0, 0, 30, 0)
+	On pin_buzzer
+	
+	JTran 1, 10
+	Off pin_buzzer
+
+	JTran 1, -20
+	On pin_buzzer
+
+	JTran 1, 10
+	Off pin_buzzer
+
+	JTran 2, 20
+	On pin_buzzer
+	
+	JTran 3, 20
+	Off pin_buzzer
+	
+	JTran 2, -20
+	On pin_buzzer
+	JTran 3, -20
+	Off pin_buzzer
+	JTran 3, 20
+	On pin_buzzer
+	JTran 3, -20
+	Off pin_buzzer
+	JTran 3, 20
+	On pin_buzzer
+	JTran 3, -20
+	Off pin_buzzer
+	JTran 3, 20
+	On pin_buzzer
+	JTran 3, -20
+	
+	Off pin_buzzer
+	
+Fend
+
+
+
+Function CheckDancePassword
+	String password$
+	GGet DancePassword.TextBoxDancePsw.Text, password$
+	If password$ = "jacobian2025" Then
+		Xqt Dance
+	Else
+		GShow PasswordError
+	EndIf
+Fend
+
+Function HomeGo
+
+	Go HomeHome
+	
+Fend
+

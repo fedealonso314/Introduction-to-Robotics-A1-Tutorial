@@ -1,0 +1,234 @@
+'Global Variables 
+Integer Tokens
+Integer Blocks
+Integer Tokens_And_Blocks
+Integer Tokens_And_Blocks_Fixed
+Double TokenHeight
+Double BlockHeight
+
+
+Function main
+
+Motor On
+Power High
+Speed 30
+Accel 30, 30
+SpeedS 500
+AccelS 5000
+Tool 1
+Integer TokenID
+Integer BlockID
+Integer ID
+'
+TmReset (1)
+Tokens = 5
+Blocks = 5
+Tokens_And_Blocks = Tokens + Blocks
+
+Tokens_And_Blocks_Fixed = Tokens + Blocks
+TokenHeight = 6.0 'mm
+BlockHeight = 6.0 'mm
+
+
+Go Retract_Safe
+
+For ID = Tokens_And_Blocks_Fixed / 2 To 1 Step -1
+	
+	Pick_Infeed_Block()
+	Stacking()
+	
+	Pick_Infeed_Token()
+
+	Stacking()
+	
+Next ID
+
+
+Tokens = 5
+Blocks = 5
+Tokens_And_Blocks = Tokens + Blocks
+
+Tokens_And_Blocks_Fixed = Tokens + Blocks
+TokenHeight = 6.0 'mm
+BlockHeight = 6.0 'mm
+
+
+For ID = Tokens_And_Blocks_Fixed / 2 To 1 Step -1
+	
+	Pick_Infeed_Block_Second()
+	Stacking_Second()
+	
+	Pick_Infeed_Token_Second()
+
+	Stacking_Second()
+	
+Next ID
+
+
+Go Retract_Safe
+
+
+
+Fend
+
+Function Stacking
+	Print "Stacking ID = ", (Tokens + Blocks)
+    Integer Pile_Height
+	Pile_Height = TokenHeight * (Tokens_And_Blocks_Fixed - (Tokens + Blocks))
+	
+	Go Stacking_Point +Z(Pile_Height + 20) CP
+	Move Stacking_Point +Z(Pile_Height) CP
+	Wait 0.2
+	Off 8
+	Wait 0.2
+	Go Stacking_Point +Z(Pile_Height + 20) CP
+	
+	
+Fend
+
+Function Stacking_Second
+	Print "Stacking ID = ", (Tokens + Blocks)
+    Integer Pile_Height_Second
+	Pile_Height_Second = (TokenHeight * (Tokens_And_Blocks_Fixed - (Tokens + Blocks))) + 60
+	
+	Go Stacking_Point +Z(Pile_Height_Second + 20) CP
+	Move Stacking_Point +Z(Pile_Height_Second) CP
+	Wait 0.2
+	Off 8
+	Wait 0.2
+	Go Stacking_Point +Z(Pile_Height_Second + 20) CP
+	
+	
+Fend
+
+
+
+Function Pick_Infeed_Token
+	'Pick Token from Infeed
+	Print "Picking Token from Infeed. Token ID = ", Tokens
+	Integer Pile_Height
+    Pile_Height = TokenHeight * (Tokens)
+	
+	Go Infeed_Token +Z(50 + (Pile_Height))
+	Move Infeed_Token +Z(Pile_Height)
+	On 8
+	Wait .2
+	Move Infeed_Token +X(-1) +Z(50 + (Pile_Height)) CP
+	Tokens = Tokens - 1
+Fend
+
+Function Pick_Infeed_Block
+	'Pick Block from Infeed
+	Print "Picking Block from Infeed. Block ID = ", Blocks
+	Integer Pile_Height
+    Pile_Height = TokenHeight * (Blocks)
+	
+	Go Infeed_Block +Z(50 + (Pile_Height))
+	Move Infeed_Block +Z(Pile_Height)
+	On 8
+	Wait .2
+	Move Infeed_Block +X(-1) +Y(1) +Z(50 + (Pile_Height)) CP
+	Blocks = Blocks - 1
+Fend
+
+Function Alignment_Token
+	'Alignment Token
+	Print "Aligning Token. Token ID = ", Tokens
+	Go Align_Token +Z((TokenHeight * Tokens_And_Blocks_Fixed) + 20) CP
+	Move Align_Token
+	Off 8
+	Move Align_Token +X(5)
+	Move Align_Token +X(5) +Z(5) CP
+	Go Align_Token +Z(5) CP
+	Move Align_Token
+	On 8
+	Wait .5
+	Move Align_Token +Z(20) CP
+Fend
+
+Function Alignment_Block
+	'Alignment Block
+	Print "Aligning Block. Block ID = ", Blocks
+	Go Align_Block +Z((TokenHeight * Tokens_And_Blocks_Fixed) + 20) CP
+	Move Align_Block
+	Off 8
+	Move Align_Block +Y(-5)
+	Move Align_Block +X(5) +Y(-6) CP
+	Move Align_Block +X(5) +Y(-6) +Z(5) CP
+	Go Align_Block +Z(5) CP
+	Move Align_Block
+	On 8
+	Wait .5
+	Move Align_Block +Z(20) CP
+Fend
+
+
+'---------------Alignment Token with Piston------------------
+Function Alignment_Token_Piston
+	'Alignment Token
+	Print "Aligning Token. Token ID = ", Tokens
+	Go Align_Token -X(10) -Y(10) +Z(30) CP
+	Move Align_Token
+	Off 8
+    Move Align_Token +Z(30) CP
+    
+    On 11
+    Wait 0.5
+    Off 11
+    
+    Move Align_Token
+	On 8
+	Wait .5
+	Move Align_Token +Z(20) CP
+Fend
+
+
+'---------------Alignment Block with Piston------------------
+Function Alignment_Block_Piston
+	'Alignment Token
+	Print "Aligning Block. Block ID = ", Blocks
+	Go Align_Block -X(10) -Y(10) +Z(30) CP
+	Move Align_Block
+	Off 8
+    Move Align_Block +Z(30) CP
+    
+    On 9
+    Wait 0.5
+    Off 9
+    
+    Move Align_Block
+	On 8
+	Wait .5
+	Move Align_Block +Z(20) CP
+Fend
+
+
+Function Pick_Infeed_Token_Second
+	'Pick Token from Infeed
+	Print "Picking Token from Infeed. Token ID = ", Tokens
+	Integer Pile_Height
+    Pile_Height = TokenHeight * (Tokens)
+	
+	Go Infeed_Token_Second +Z(50 + (Pile_Height))
+	Move Infeed_Token_Second +Z(Pile_Height)
+	On 8
+	Wait .2
+	Move Infeed_Token_Second +X(-1) +Z(50 + (Pile_Height)) CP
+	Tokens = Tokens - 1
+Fend
+
+Function Pick_Infeed_Block_Second
+	'Pick Block from Infeed
+	Print "Picking Block from Infeed. Block ID = ", Blocks
+	Integer Pile_Height
+    Pile_Height = TokenHeight * (Blocks)
+	
+	Go Infeed_Block_Second +Z(50 + (Pile_Height))
+	Move Infeed_Block_Second +Z(Pile_Height)
+	On 8
+	Wait .2
+	Move Infeed_Block_Second +X(-1) +Y(1) +Z(50 + (Pile_Height)) CP
+	Blocks = Blocks - 1
+Fend
+
+
