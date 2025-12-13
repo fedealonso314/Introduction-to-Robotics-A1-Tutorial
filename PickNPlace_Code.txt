@@ -1,0 +1,235 @@
+
+'Global Variables 
+Integer Tokens
+Integer Blocks
+Double TokenHeight
+Double BlockHeight
+
+Integer Pin_Start
+Integer Pin_Stop
+Integer Pin_Reset
+Integer Pin_Resume
+Integer Pin_Pause
+
+Integer Pin_Gauge1
+Integer Pin_Gauge2
+
+Integer Pin_Piston_Token
+Integer Pin_Piston_Block
+
+Integer Pin_Vacuum_Nozzle
+
+
+'____________________Main Function__________________
+
+Function main
+	
+TmReset 1 'TIMER
+
+Cls
+Motor On
+Power High
+Speed 80
+Accel 80, 30
+SpeedS 500
+AccelS 5000
+Tool 1
+
+'Global variables assignment
+Tokens = 3
+Blocks = 3
+TokenHeight = 6.0 'mm
+BlockHeight = 6.0 'mm
+
+
+'Pins declaration 
+
+Pin_Start = 0	' latch
+Pin_Stop = 4	' latch
+Pin_Reset = 7	' pulse
+Pin_Resume = 6	' pulse
+Pin_Pause = 5	' pulse
+
+Pin_Gauge1 = 1
+Pin_Gauge2 = 2
+
+Pin_Piston_Token = 10
+Pin_Piston_Block = 9
+
+Pin_Vacuum_Nozzle = 8
+
+Integer TokenID
+Integer BlockID
+
+
+
+
+Go Retract_Safe
+
+
+
+'---------Tokens----------
+
+For TokenID = Tokens To 1 Step -1
+	Pick_Infeed_Token()
+	Alignment_Token_Piston()
+	Place_Tray_Token_Pallet_Local()
+Next TokenID
+
+'---------Blocks----------
+
+For BlockID = Blocks To 1 Step -1
+	Pick_Infeed_Block()
+	Alignment_Block_Piston()
+	Place_Tray_Block_Pallet_Local()
+Next BlockID
+
+Go Retract_Safe
+
+Go HomeReal
+
+Home
+
+Print Tmr(1) 'timer
+
+Fend
+
+
+'-----------Place---Token---Pallet---Local-----------------
+Function Place_Tray_Token_Pallet_Local
+	Print "Placing Token. 				Token ID = ", Tokens
+	P20 = XY(0, 0, 0, 0, 0, 0) /1;
+	P21 = XY(0, -60, 0, 0, 0, 0) /1;
+	P22 = XY(30, 0, 0, 0) /1;
+	
+	Pallet 1, P20, P22, P21, 2, 3
+	
+	Go Pallet(1, 1, Tokens) -Z(50) CP
+	
+    Move Pallet(1, 1, Tokens)
+	Off Pin_Vacuum_Nozzle
+	Wait .2
+	Move Pallet(1, 1, Tokens) -Z(50) CP
+
+	Tokens = Tokens - 1
+Fend
+'-----------Place---Block---Pallet---Local-----------------
+Function Place_Tray_Block_Pallet_Local
+	Print "Placing Block. 				Block ID = ", Blocks
+	Print "Tray Position ID = ", Blocks
+	P20 = XY(0, 0, 0, 0) /1;
+	P21 = XY(0, -60, 0, 0) /1;
+	P22 = XY(30, 0, 0, 0) /1;
+	
+	Pallet 1, P20, P22, P21, 2, 3
+	
+	Go Pallet(1, 2, Blocks) -Z(50) CP
+	
+	
+	
+    Move Pallet(1, 2, Blocks) -Z(5)
+    
+    BGo XY(0, 0, 0, 3)
+    
+	BGo XY(0, 0, 0, -3)
+	
+	Move Pallet(1, 2, Blocks)
+	
+	
+    
+	Off Pin_Vacuum_Nozzle
+	Wait .2
+	Move Pallet(1, 2, Blocks) -Z(50) CP
+	
+	Blocks = Blocks - 1
+Fend
+
+
+'---------------Alignment Token with Piston------------------
+Function Alignment_Token_Piston
+	
+	Print "Aligning Token. 			Token ID = ", Tokens
+	
+	Go Align_Token -X(15) -Y(15) +Z(15) CP
+	Move Align_Token -X(10) -Y(10)
+	
+	Off Pin_Vacuum_Nozzle
+	Move Align_Token -X(2) -Y(2)
+	
+	
+	Off Pin_Vacuum_Nozzle
+    Move Align_Token +Z(30) CP
+    
+    On Pin_Piston_Token
+    Wait 0.5
+    Off Pin_Piston_Token
+    
+    Move Align_Token
+	On Pin_Vacuum_Nozzle
+	Wait .2
+	Move Align_Token +Z(20) CP
+Fend
+
+
+'---------------Alignment Block with Piston------------------
+Function Alignment_Block_Piston
+	
+	Print "Aligning Block. 			Block ID = ", Blocks
+	
+	Go Align_Block -X(20) -Y(20) +Z(30) CP
+	Move Align_Block -X(10) -Y(10) +Z(1)
+	
+	Off Pin_Vacuum_Nozzle
+	Move Align_Block
+	Move Align_Block +X(1) +Y(1)
+	
+	
+	Off Pin_Vacuum_Nozzle
+    Move Align_Block +Z(30) CP
+    
+    On Pin_Piston_Block
+    Wait 0.5
+    Off Pin_Piston_Block
+    
+    Move Align_Block
+	On Pin_Vacuum_Nozzle
+	Wait .2
+	Move Align_Block +Z(20) CP
+Fend
+
+'---------------Pick Token from Infeed------------------
+Function Pick_Infeed_Token
+	
+	Print "Picking Token from Infeed. 	Token ID = ", Tokens
+	
+	Go Infeed_Token +Z(50 + (Tokens * TokenHeight)) CP
+	Move Infeed_Token +Z(Tokens * TokenHeight)
+	On Pin_Vacuum_Nozzle
+	Wait .2
+	BMove XY(0, 0, 1, 0)
+	Move Infeed_Token -X(3) -Y(3) +Z(50 + (Tokens * TokenHeight)) CP
+	
+Fend
+
+'---------------Pick Block from Infeed------------------
+Function Pick_Infeed_Block
+	
+	Print "Picking Block from Infeed. 	Block ID = ", Blocks
+	
+	Go Infeed_Block +Z(50 + (Blocks * BlockHeight)) CP
+	Move Infeed_Block +Z(Blocks * BlockHeight)
+	On Pin_Vacuum_Nozzle
+	Wait .2
+	BMove XY(0, 0, 1, 0)
+	Move Infeed_Block -X(3) -Y(3) +Z(50 + (Blocks * BlockHeight)) CP
+	
+Fend
+
+
+
+
+
+
+
+
+
